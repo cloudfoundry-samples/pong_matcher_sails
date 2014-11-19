@@ -19,25 +19,22 @@
  * http://sailsjs.org/#/documentation/reference/sails.config/sails.config.connections.html
  */
 
+/* See https://github.com/balderdashy/sails-mysql/issues/154 for why we're
+   parsing URLs here */
+var urlParse = require('url').parse;
+var databaseUrl = (process.env.DATABASE_URL ||
+    "mysql2://sailspong:sailspong@127.0.0.1:3306/pong_matcher_sails_development")
+var options = urlParse(databaseUrl);
+
 module.exports.connections = {
 
-  /***************************************************************************
-  *                                                                          *
-  * MySQL is the world's most popular relational database.                   *
-  * http://en.wikipedia.org/wiki/MySQL                                       *
-  *                                                                          *
-  * Run: npm install sails-mysql                                             *
-  *                                                                          *
-  ***************************************************************************/
   mysql: {
     adapter: 'sails-mysql',
-    url: process.env.DATABASE_URL
+    host: options.hostname,
+    port: options.port,
+    user: options.auth.split(':')[0],
+    password: options.auth.split(':')[1],
+    database: options.pathname.split('/')[1]
   }
-
-  /***************************************************************************
-  *                                                                          *
-  * More adapters: https://github.com/balderdashy/sails                      *
-  *                                                                          *
-  ***************************************************************************/
 
 };
