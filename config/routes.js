@@ -22,5 +22,7 @@
 
 module.exports.routes = {
 
+  'GET /match_requests/:id': 'MatchRequestController.findOne',
+  'PUT /match_requests/:id': 'MatchRequestController.create'
 
 };
