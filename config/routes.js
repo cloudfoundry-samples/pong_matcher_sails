@@ -22,6 +22,7 @@
 
 module.exports.routes = {
 
+  'DELETE /all': 'EveryResourceController.destroy',
   'GET /match_requests/:id': 'MatchRequestController.findOne',
   'PUT /match_requests/:id': 'MatchRequestController.create'
 
