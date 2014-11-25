@@ -46,16 +46,11 @@ module.exports = {
           Participant.findOne()
             .where({ matchRequestUuid: req.param('id') })
             .exec(function(err, participant) {
-              if (participant) {
-                res.end(JSON.stringify({
-                  uuid: matchRequest.uuid,
-                  player: matchRequest.requesterId,
-                  match_id: participant.matchId
-                }));
-              } else {
-                res.status(404)
-                  .send('Not found');
-              }
+              res.end(JSON.stringify({
+                id: matchRequest.uuid,
+                player: matchRequest.requesterId,
+                match_id: participant ? participant.matchId : null
+              }));
             });
         } else {
           res.status(404)
