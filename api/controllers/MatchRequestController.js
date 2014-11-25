@@ -10,45 +10,57 @@ module.exports = {
 
     MatchRequest.create(attributes)
       .exec(function(err, matchRequest) {
-        var firstOpenMatchRequest = matchRequest.firstOpen();
-        var matchId = uuid.v4();
+        matchRequest.firstOpen()
+          .exec(function(err, firstOpenMatchRequest) {
+            var matchId = uuid.v4();
 
-        if (firstOpenMatchRequest) {
-          Participant.create({
-            matchId: matchId,
-            matchRequestUuid: firstOpenMatchRequest.uuid,
-            playerId: firstOpenMatchRequest.requesterId,
-            opponentId: matchRequest.requesterId
-          })
-          .exec(function(err, participant) {
-            Participant.create({
-              matchId: matchId,
-              matchRequestUuid: matchRequest.uuid,
-              playerId: matchRequest.requesterId,
-              opponentId: firstOpenMatchRequest.requesterId
-            })
-            .exec(function(err, participant) {
+            if (firstOpenMatchRequest) {
+              Participant.create({
+                matchId: matchId,
+                matchRequestUuid: firstOpenMatchRequest.uuid,
+                playerId: firstOpenMatchRequest.requesterId,
+                opponentId: matchRequest.requesterId
+              })
+              .exec(function(err, participant) {
+                Participant.create({
+                  matchId: matchId,
+                  matchRequestUuid: matchRequest.uuid,
+                  playerId: matchRequest.requesterId,
+                  opponentId: firstOpenMatchRequest.requesterId
+                })
+                .exec(function(err, participant) {
+                  res.end(JSON.stringify(matchRequest));
+                });
+              });
+            } else {
               res.end(JSON.stringify(matchRequest));
-            });
+            }
           });
-        } else {
-          res.end(JSON.stringify(matchRequest));
-        }
       });
   },
 
   findOne: function(req, res) {
     MatchRequest.findOne({ uuid: req.param('id') })
       .exec(function(err, matchRequest) {
-        Participant.findOne()
-          .where({ matchRequestUuid: req.param('id') })
-          .exec(function(err, participant) {
-            res.end(JSON.stringify({
-              uuid: matchRequest.uuid,
-              player: matchRequest.requesterId,
-              match_id: participant.matchId
-            }));
-          });
+        if (matchRequest) {
+          Participant.findOne()
+            .where({ matchRequestUuid: req.param('id') })
+            .exec(function(err, participant) {
+              if (participant) {
+                res.end(JSON.stringify({
+                  uuid: matchRequest.uuid,
+                  player: matchRequest.requesterId,
+                  match_id: participant.matchId
+                }));
+              } else {
+                res.status(404)
+                  .send('Not found');
+              }
+            });
+        } else {
+          res.status(404)
+            .send('Not found');
+        }
       });
   }
 };
