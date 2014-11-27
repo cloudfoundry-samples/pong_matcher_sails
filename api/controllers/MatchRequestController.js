@@ -1,4 +1,5 @@
 var uuid = require('node-uuid');
+var Promise = require('bluebird');
 
 module.exports = {
   create: function(req, res) {
@@ -9,33 +10,34 @@ module.exports = {
     };
 
     MatchRequest.create(attributes)
-      .exec(function(err, matchRequest) {
-        matchRequest.firstOpen()
-          .exec(function(err, firstOpenMatchRequest) {
-            var matchId = uuid.v4();
+      .then(function(matchRequest) {
+        this.matchRequest = matchRequest;
+        return this.matchRequest.firstOpen();
+      })
+      .then(function(firstOpenMatchRequest) {
+        this.opponentRequest = firstOpenMatchRequest;
+        this.matchId = uuid.v4();
 
-            if (firstOpenMatchRequest) {
+        if (this.opponentRequest) {
+          return Promise.join(
               Participant.create({
-                matchId: matchId,
-                matchRequestUuid: firstOpenMatchRequest.uuid,
-                playerId: firstOpenMatchRequest.requesterId,
-                opponentId: matchRequest.requesterId
-              })
-              .exec(function(err, participant) {
-                Participant.create({
-                  matchId: matchId,
-                  matchRequestUuid: matchRequest.uuid,
-                  playerId: matchRequest.requesterId,
-                  opponentId: firstOpenMatchRequest.requesterId
-                })
-                .exec(function(err, participant) {
-                  res.end(JSON.stringify(matchRequest));
-                });
-              });
-            } else {
-              res.end(JSON.stringify(matchRequest));
-            }
-          });
+                matchId: this.matchId,
+                matchRequestUuid: this.opponentRequest.uuid,
+                playerId: this.opponentRequest.requesterId,
+                opponentId: this.matchRequest.requesterId
+              }),
+              Participant.create({
+                matchId: this.matchId,
+                matchRequestUuid: this.matchRequest.uuid,
+                playerId: this.matchRequest.requesterId,
+                opponentId: this.opponentRequest.requesterId
+              }));
+        } else {
+          return Promise.resolve();
+        }
+      })
+      .then(function(firstParticipant, secondParticipant) {
+        res.end(JSON.stringify(matchRequest));
       });
   },
 
