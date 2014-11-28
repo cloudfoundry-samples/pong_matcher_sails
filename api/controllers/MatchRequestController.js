@@ -44,24 +44,21 @@ module.exports = {
   findOne: function(req, res) {
     var getMatchRequest = MatchRequest.findOne({ uuid: req.param('id') });
     var getResults = Result.find();
+    var addAttribute = function(attr, val, obj) {
+      var mergeObj = {};
+      mergeObj[attr] = { value: val };
+      return Object.create(obj, mergeObj);
+    };
+
     Promise.join(getMatchRequest, getResults)
       .spread(function(matchRequest, results) {
         this.matchRequest = matchRequest;
         if (this.matchRequest) {
-          return results;
+          return (results || []).map(function(r) { return r.matchId });
         } else {
           res.status(404).send('Not found');
-        }
-      })
-      .then(function(results) {
-        if (results && results.length) {
-          return results;
-        } else {
           return [];
         }
-      })
-      .map(function(result) {
-        return result.matchId;
       })
       .then(function(finishedMatchIds) {
         if (finishedMatchIds.length) {
@@ -76,13 +73,8 @@ module.exports = {
         }
       })
       .then(function(participant) {
-        var body;
-
         if (participant) {
-          body = JSON.stringify(Object.create(this.matchRequest, {
-            matchId: { value: participant.matchId }
-          }));
-          res.end(body);
+          res.end(JSON.stringify(addAttribute('matchId', participant.matchId, this.matchRequest)));
         } else {
           res.end(JSON.stringify(this.matchRequest));
         }
