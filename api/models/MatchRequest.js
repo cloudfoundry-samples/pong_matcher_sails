@@ -5,20 +5,23 @@ module.exports = {
   findWithMatch: function(id) {
     var getMatchRequest = MatchRequest.findOne({ uuid: id });
     var getResults = Result.find();
-    var addAttribute = function(attr, val, obj) {
+    var addAttribute = function(attr, src, dest) {
       var mergeObj = {};
-      mergeObj[attr] = { value: val };
-      return Object.create(obj, mergeObj);
+
+      if (src) {
+        mergeObj[attr] = { value: src[attr] };
+        return Object.create(dest, mergeObj);
+      } else {
+        return dest;
+      }
     };
 
     return Promise.join(getMatchRequest, getResults)
-      .spread(function(matchRequest, results) {
+      .spread(function(matchRequest, foundResults) {
         this.matchRequest = matchRequest;
-        if (this.matchRequest) {
-          return (results || []).map(function(r) { return r.matchId });
-        } else {
-          return [];
-        }
+        return []
+          .concat(foundResults)
+          .map(function(r) { return r.matchId });
       })
       .then(function(finishedMatchIds) {
         if (finishedMatchIds.length) {
@@ -33,11 +36,7 @@ module.exports = {
         }
       })
       .then(function(participant) {
-        if (participant) {
-          return addAttribute('matchId', participant.matchId, this.matchRequest);
-        } else {
-          return this.matchRequest;
-        }
+        return addAttribute('matchId', participant, this.matchRequest);
       });
   },
 
