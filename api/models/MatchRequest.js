@@ -6,11 +6,11 @@ module.exports = {
     var getMatchRequest = MatchRequest.findOne({ uuid: id });
     var getResults = Result.find();
     var addAttribute = function(attr, src, dest) {
-      var mergeObj = {};
+      var properties = {};
 
       if (src) {
-        mergeObj[attr] = { value: src[attr] };
-        return Object.create(dest, mergeObj);
+        properties[attr] = { value: src[attr] };
+        return Object.create(dest, properties);
       } else {
         return dest;
       }
