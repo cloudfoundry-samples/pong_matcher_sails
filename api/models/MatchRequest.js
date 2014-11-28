@@ -5,7 +5,7 @@ module.exports = {
     uuid: 'string',
     requesterId: 'string',
 
-    firstOpen: function() {
+    findOpponentMatchRequest: function() {
       var requesterId = this.requesterId;
 
       var getOpponentIds = Participant.find()
