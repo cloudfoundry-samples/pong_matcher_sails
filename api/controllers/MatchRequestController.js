@@ -42,26 +42,53 @@ module.exports = {
   },
 
   findOne: function(req, res) {
-    MatchRequest.findOne({ uuid: req.param('id') })
-      .then(function(matchRequest) {
+    var getMatchRequest = MatchRequest.findOne({ uuid: req.param('id') });
+    var getResults = Result.find();
+    Promise.join(getMatchRequest, getResults)
+      .spread(function(matchRequest, results) {
         this.matchRequest = matchRequest;
         if (this.matchRequest) {
-          return Participant.find({
-            matchRequestUuid: req.param('id'),
-            matchId: { '!': 'SELECT match_id FROM results' }
-          });
+          return results;
         } else {
           res.status(404).send('Not found');
         }
       })
-      .then(function(participants) {
-        if (participants && participants.length) {
-          res.end(JSON.stringify(Object.create(this.matchRequest, {
-            matchId: { value: participants[0].matchId }
-          })));
+      .then(function(results) {
+        if (results && results.length) {
+          return results;
+        } else {
+          return [];
+        }
+      })
+      .map(function(result) {
+        return result.matchId;
+      })
+      .then(function(finishedMatchIds) {
+        if (finishedMatchIds.length) {
+          return Participant.findOne({
+            matchRequestUuid: req.param('id'),
+            matchId: { '!': finishedMatchIds }
+          });
+        } else {
+          return Participant.findOne({
+            matchRequestUuid: req.param('id')
+          });
+        }
+      })
+      .then(function(participant) {
+        var body;
+
+        if (participant) {
+          body = JSON.stringify(Object.create(this.matchRequest, {
+            matchId: { value: participant.matchId }
+          }));
+          res.end(body);
         } else {
           res.end(JSON.stringify(this.matchRequest));
         }
+      })
+      .catch(function(err) {
+        res.status(500).send(err.message);
       });
   }
 };

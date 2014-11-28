@@ -1,9 +1,10 @@
+var Promise = require('bluebird');
+
 module.exports = {
   destroy: function(req, res) {
-    MatchRequest.destroy({}).exec(function() {
-      Participant.destroy({}).exec(function() {
+    Promise.join(MatchRequest.destroy({}), Participant.destroy({}), Result.destroy({}))
+      .then(function() {
         res.end();
       });
-    });
   }
 };
