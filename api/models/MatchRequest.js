@@ -7,30 +7,35 @@ module.exports = {
 
     firstOpen: function() {
       var requesterId = this.requesterId;
+
       var getOpponentIds = Participant.find()
         .where({ playerId: requesterId })
-        .then(function(participants) { return participants; })
-        .map(function(participant) { return participant.opponentId; });
+        .then(function(participants) {
+          return participants.map(function(p) { return p.opponentId; })
+        });
+
       var getPlayedMatchRequestUuids = Participant.find()
-        .then(function(participants) { return participants; })
-        .map(function(participant) { return participant.matchRequestUuid; });
+        .then(function(participants) {
+          return participants.map(function(p) { return p.matchRequestUuid; })
+        });
+
+      var whereClause = function(opponentIds, playedMatchRequestUuids) {
+        if (playedMatchRequestUuids.length) {
+          return {
+            requesterId: { '!': opponentIds.concat(requesterId) },
+            uuid: { '!': playedMatchRequestUuids }
+          };
+        } else {
+          return {
+            requesterId: { '!': opponentIds.concat(requesterId) }
+          };
+        }
+      };
 
       return Promise.join(getOpponentIds, getPlayedMatchRequestUuids)
         .spread(function(opponentIds, playedMatchRequestUuids) {
-          var whereClause = function(playedMatchRequestUuids) {
-            if (playedMatchRequestUuids.length) {
-              return {
-                requesterId: { '!': opponentIds.concat(requesterId) },
-                uuid: { '!': playedMatchRequestUuids }
-              };
-            } else {
-              return {
-                requesterId: { '!': opponentIds.concat(requesterId) }
-              };
-            }
-          };
           return MatchRequest.findOne()
-            .where(whereClause(playedMatchRequestUuids));
+            .where(whereClause(opponentIds, playedMatchRequestUuids));
         });
     },
 
