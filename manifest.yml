@@ -1,0 +1,5 @@
+---
+applications:
+  - name: sailspong
+    services:
+      - mysql
