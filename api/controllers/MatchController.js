@@ -5,16 +5,16 @@ module.exports = {
       .then(function(participants) {
         if (participants.length) {
           res.end(JSON.stringify({
-            id: firstParticipant.matchId,
-            match_request_1_id: firstParticipant.matchRequestUuid,
-            match_request_2_id: secondParticipant.matchRequestUuid
+            id: participants[0].matchId,
+            match_request_1_id: participants[0].matchRequestUuid,
+            match_request_2_id: participants[1].matchRequestUuid
           }));
         } else {
           res.status(404).end();
         }
       })
       .catch(function(err) {
-        res.status(500).end();
+        res.status(500).send(err.message);
       });
   }
 };

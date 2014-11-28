@@ -43,20 +43,24 @@ module.exports = {
 
   findOne: function(req, res) {
     MatchRequest.findOne({ uuid: req.param('id') })
-      .exec(function(err, matchRequest) {
-        if (matchRequest) {
-          Participant.findOne()
-            .where({ matchRequestUuid: req.param('id') })
-            .exec(function(err, participant) {
-              res.end(JSON.stringify({
-                id: matchRequest.uuid,
-                player: matchRequest.requesterId,
-                match_id: participant ? participant.matchId : null
-              }));
-            });
+      .then(function(matchRequest) {
+        this.matchRequest = matchRequest;
+        if (this.matchRequest) {
+          return Participant.find({
+            matchRequestUuid: req.param('id'),
+            matchId: { '!': 'SELECT match_id FROM results' }
+          });
         } else {
-          res.status(404)
-            .send('Not found');
+          res.status(404).send('Not found');
+        }
+      })
+      .then(function(participants) {
+        if (participants && participants.length) {
+          res.end(JSON.stringify(Object.create(this.matchRequest, {
+            matchId: { value: participants[0].matchId }
+          })));
+        } else {
+          res.end(JSON.stringify(this.matchRequest));
         }
       });
   }
