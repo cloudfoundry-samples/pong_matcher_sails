@@ -1,6 +1,79 @@
 var Promise = require('bluebird');
+var uuid = require('node-uuid');
 
 module.exports = {
+  findWithMatch: function(id) {
+    var getMatchRequest = MatchRequest.findOne({ uuid: id });
+    var getResults = Result.find();
+    var addAttribute = function(attr, val, obj) {
+      var mergeObj = {};
+      mergeObj[attr] = { value: val };
+      return Object.create(obj, mergeObj);
+    };
+
+    return Promise.join(getMatchRequest, getResults)
+      .spread(function(matchRequest, results) {
+        this.matchRequest = matchRequest;
+        if (this.matchRequest) {
+          return (results || []).map(function(r) { return r.matchId });
+        } else {
+          return [];
+        }
+      })
+      .then(function(finishedMatchIds) {
+        if (finishedMatchIds.length) {
+          return Participant.findOne({
+            matchRequestUuid: id,
+            matchId: { '!': finishedMatchIds }
+          });
+        } else if (this.matchRequest) {
+          return Participant.findOne({
+            matchRequestUuid: id
+          });
+        }
+      })
+      .then(function(participant) {
+        if (participant) {
+          return addAttribute('matchId', participant.matchId, this.matchRequest);
+        } else {
+          return this.matchRequest;
+        }
+      });
+  },
+
+  createWithMatch: function(newUuid, requesterId, matchId) {
+    return MatchRequest.create({
+      uuid: newUuid,
+      requesterId: requesterId,
+      matchId: matchId
+    })
+    .then(function(matchRequest) {
+      this.matchRequest = matchRequest;
+      return this.matchRequest.findOpponentMatchRequest();
+    })
+    .then(function(opponentRequest) {
+      matchId = uuid.v4();
+
+      if (opponentRequest) {
+        return Promise.join(
+            Participant.create({
+              matchId: matchId,
+              matchRequestUuid: opponentRequest.uuid,
+              playerId: opponentRequest.requesterId,
+              opponentId: this.matchRequest.requesterId
+            }),
+            Participant.create({
+              matchId: matchId,
+              matchRequestUuid: this.matchRequest.uuid,
+              playerId: this.matchRequest.requesterId,
+              opponentId: opponentRequest.requesterId
+            }));
+      } else {
+        return Promise.resolve();
+      }
+    });
+  },
+
   attributes: {
     uuid: 'string',
     requesterId: 'string',
