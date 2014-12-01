@@ -60,6 +60,12 @@ GRANT ALL ON pong_matcher_go_development.* TO 'sailspong'@'localhost';
 exit
 ```
 
+Install dependencies:
+
+```bash
+npm install
+```
+
 Migrate the database:
 
 ```bash
