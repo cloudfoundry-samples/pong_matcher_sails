@@ -40,11 +40,10 @@ module.exports = {
       });
   },
 
-  createWithMatch: function(newUuid, requesterId, matchId) {
+  createWithMatch: function(newUuid, requesterId) {
     return MatchRequest.create({
       uuid: newUuid,
-      requesterId: requesterId,
-      matchId: matchId
+      requesterId: requesterId
     })
     .then(function(matchRequest) {
       this.matchRequest = matchRequest;

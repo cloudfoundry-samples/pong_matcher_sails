@@ -3,7 +3,7 @@ var Promise = require('bluebird');
 module.exports = {
   create: function(req, res) {
     MatchRequest
-      .createWithMatch(req.param('id'), req.body.player, req.body.match_id)
+      .createWithMatch(req.param('id'), req.body.player)
       .then(function() { res.end() });
   },
 
