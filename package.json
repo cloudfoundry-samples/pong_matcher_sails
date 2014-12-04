@@ -9,7 +9,6 @@
   "keywords": [],
   "dependencies": {
     "bluebird": "^2.3.11",
-    "db-migrate": "camelpunch/node-db-migrate",
     "ejs": "~0.8.4",
     "grunt": "0.4.2",
     "grunt-contrib-clean": "~0.5.0",
