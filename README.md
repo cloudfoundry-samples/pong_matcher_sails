@@ -55,8 +55,8 @@ Create a database user and table in the MySQL REPL you just opened:
 
 ```sql
 CREATE USER 'sailspong'@'localhost' IDENTIFIED BY 'sailspong';
-CREATE DATABASE pong_matcher_go_development;
-GRANT ALL ON pong_matcher_go_development.* TO 'sailspong'@'localhost';
+CREATE DATABASE pong_matcher_sails_development;
+GRANT ALL ON pong_matcher_sails_development.* TO 'sailspong'@'localhost';
 exit
 ```
 
