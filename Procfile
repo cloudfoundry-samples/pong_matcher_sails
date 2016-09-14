@@ -1,1 +1,1 @@
-web: node_modules/.bin/db-migrate up && node app.js
+web: node_modules/.bin/db-migrate up; node app.js
