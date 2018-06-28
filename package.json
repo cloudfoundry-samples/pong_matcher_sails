@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "description": "a Sails application",
   "engines": {
-    "node": "4.x.x"
+    "node": "6.x.x"
   },
   "keywords": [],
   "dependencies": {
