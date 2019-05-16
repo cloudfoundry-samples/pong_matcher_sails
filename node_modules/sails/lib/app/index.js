@@ -2,13 +2,12 @@
  * Module dependencies.
  */
 
-// try {console.time('require_core');}catch(e){}
+var _ = require('@sailshq/lodash');
 var Sails = require('./Sails');
-var _ = require('lodash');
 
 
 /**
- * Expose `Sails` factory
+ * Expose `Sails` factory...thing.
  * (maintains backwards compatibility w/ constructor usage)
  */
 
@@ -23,3 +22,6 @@ function SailsFactory() {
 var singleton = SailsFactory();
 SailsFactory.isLocalSailsValid = _.bind(singleton.isLocalSailsValid, singleton);
 SailsFactory.isSailsAppSync = _.bind(singleton.isSailsAppSync, singleton);
+
+
+

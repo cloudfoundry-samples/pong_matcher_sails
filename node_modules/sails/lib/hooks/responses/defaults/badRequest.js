@@ -1,10 +1,18 @@
 /**
+ * Module dependencies
+ */
+
+var util = require('util');
+var _ = require('@sailshq/lodash');
+
+
+
+/**
  * 400 (Bad Request) Handler
  *
  * Usage:
  * return res.badRequest();
  * return res.badRequest(data);
- * return res.badRequest(data, 'some/specific/badRequest/view');
  *
  * e.g.:
  * ```
@@ -15,50 +23,42 @@
  * ```
  */
 
-module.exports = function badRequest(data, options) {
+module.exports = function badRequest(data) {
 
-  // Get access to `req`, `res`, & `sails`
+  // Get access to `req` and `res`
   var req = this.req;
   var res = this.res;
+
+  // Get access to `sails`
   var sails = req._sails;
+
+  // Log error to console
+  if (!_.isUndefined(data)) {
+    sails.log.verbose('Sending 400 ("Bad Request") response: \n', data);
+  }
 
   // Set status code
   res.status(400);
 
-  // Log error to console
-  if (data !== undefined) {
-    sails.log.verbose('Sending 400 ("Bad Request") response: \n',data);
-  }
-  else sails.log.verbose('Sending 400 ("Bad Request") response');
-
-  // Only include errors in response if application environment
-  // is not set to 'production'.  In production, we shouldn't
-  // send back any identifying information about errors.
-  if (sails.config.environment === 'production') {
-    data = undefined;
+  // If no data was provided, use res.sendStatus().
+  if (_.isUndefined(data)) {
+    return res.sendStatus(400);
   }
 
-  // If the user-agent wants JSON, always respond with JSON
-  if (req.wantsJSON) {
-    return res.jsonx(data);
+  if (_.isError(data)) {
+    // If the data is an Error instance and it doesn't have a custom .toJSON(),
+    // then util.inspect() it instead (otherwise res.json() will turn it into an empty dictionary).
+    // > Note that we don't do this in production, since (depending on your Node.js version) inspecting
+    // > the Error might reveal the `stack`.  And since `res.badRequest()` could certainly be used in
+    // > production, we wouldn't want to inadvertently dump a stack trace.
+    if (!_.isFunction(data.toJSON)) {
+      if (process.env.NODE_ENV === 'production') {
+        return res.sendStatus(400);
+      }
+      // No need to JSON stringify (this is already a string).
+      return res.send(util.inspect(data));
+    }
   }
-
-  // If second argument is a string, we take that to mean it refers to a view.
-  // If it was omitted, use an empty object (`{}`)
-  options = (typeof options === 'string') ? { view: options } : options || {};
-
-  // If a view was provided in options, serve it.
-  // Otherwise try to guess an appropriate view, or if that doesn't
-  // work, just send JSON.
-  if (options.view) {
-    return res.view(options.view, { data: data });
-  }
-
-  // If no second argument provided, try to serve the implied view,
-  // but fall back to sending JSON(P) if no view can be inferred.
-  else return res.guessView({ data: data }, function couldNotGuessView () {
-    return res.jsonx(data);
-  });
+  return res.json(data);
 
 };
-

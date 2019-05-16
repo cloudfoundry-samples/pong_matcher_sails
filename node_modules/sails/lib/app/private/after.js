@@ -2,14 +2,15 @@
  * Module dependencies
  */
 
-var _ = require('lodash');
+var _ = require('@sailshq/lodash');
 var async = require('async');
 
 
-//
-// TODO
-// Pull this into a separate module, since it's not specific to Sails.
-//
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// FUTURE
+// Pull _most of this_ into a separate module, since it's not specific
+// to Sails, and has come up in a few different places.
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 
 /**
@@ -21,7 +22,7 @@ var async = require('async');
  *
  * This is a lot like jQuery's `$(document).ready()`.
  *
- * @param  {EventEmitter} emitter
+ * @param  {EventEmitter} emitter The Sails application instance
  */
 
 module.exports = function mixinAfter(emitter) {
@@ -36,18 +37,23 @@ module.exports = function mixinAfter(emitter) {
   emitter.warmEvents = {};
 
 
+  var _originalEmit = emitter.emit;
   /**
    * emitter.emit()
    *
-   * Override `EventEmitter.prototype.emit`.
+   * Synchronously calls each of the listeners registered for the event named eventName, in the order they were registered, passing the supplied arguments to each.
+   *
+   * Override `EventEmitter.prototype.emit` to keep track of all the events that have occurred once.
    * (Required to support `emitter.after()`)
+   *
+   * @param {String} eventName name of the event
+   * @return {boolean} Returns true if the event had listeners, false otherwise.
+   * @see https://nodejs.org/api/events.html#events_emitter_emit_eventname_args
    */
-
-  var _emit = _.clone(emitter.emit);
-  emitter.emit = function(evName) {
+  emitter.emit = function(eventName) {
     var args = Array.prototype.slice.call(arguments, 0);
-    emitter.warmEvents[evName] = true;
-    _emit.apply(emitter, args);
+    emitter.warmEvents[eventName] = true;
+    return _originalEmit.apply(emitter, args);
   };
 
 
@@ -58,7 +64,6 @@ module.exports = function mixinAfter(emitter) {
    *
    * @param  {String|Array} events   [name of the event(s)]
    * @param  {Function}     fn       [event handler function]
-   * @context {Sails}
    */
 
   emitter.after = function(events, fn) {
@@ -70,24 +75,39 @@ module.exports = function mixinAfter(emitter) {
 
     // Convert named event dependencies into an array
     // of async-compatible functions.
-    var dependencies = _.reduce(events,
-      function(dependencies, event) {
+    var dependencies = _.reduce(events, function (dependencies, event) {
 
-        var handlerFn = function(cb) {
-          if (emitter.warmEvents[event]) {
-            cb();
-          } else {
-            emitter.once(event, cb);
-          }
-        };
-        dependencies.push(handlerFn);
-        return dependencies;
-      }, []);
+      // Push on the handler function.
+      dependencies.push(function handlerFn(cb) {
+
+        // If the event has already fired, then just execute our callback.
+        if (emitter.warmEvents[event]) {
+          return cb();
+        }
+        // But otherwise, bind a one-time-use handler that listens for the
+        // first time this event is fired, and then executes our callback
+        // once it does.
+        else {
+          emitter.once(event, function (){
+            return cb();
+          });
+        }
+
+      });//</declared and pushed on handler function>
+
+      return dependencies;
+
+    }, []);//</_.reduce() :: iterate over each event in order to build `dependencies` (an array of handler functions)>
+
 
     // When all events have fired, call `fn`
     // (all arguments passed to `emit()` calls are discarded)
     async.parallel(dependencies, function(err) {
-      if (err) sails.log.error(err);
+      if (err) {
+        console.error('Consistency violation: Received `err`, but this should be impossible!  Here is the error: '+err.stack);
+        console.error('^^^If you are seeing this message, then please report this error at http://sailsjs.com/bugs.  (Continuing anyway...)');
+      }//>-
+
       return fn();
     });
 

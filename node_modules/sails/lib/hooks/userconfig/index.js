@@ -1,68 +1,65 @@
 module.exports = function(sails) {
 
 
-	/**
-	 * Module dependencies
-	 */
+  /**
+   * Module dependencies
+   */
 
-	var util =	require('sails-util'),
-		async = require('async');
-
-
-
-	/**
-	 * Userconfig
-	 *
-	 * Load configuration files.
-	 */
-	return {
+  var _ = require('@sailshq/lodash');
+  var mergeDictionaries = require('merge-dictionaries');
 
 
-		// Default configuration
-		defaults: {},
+  /**
+   * Userconfig
+   *
+   * Load configuration files.
+   */
+  return {
 
 
-		/**
-		 * Fetch relevant modules, exposing them on `sails` subglobal if necessary,
-		 */
-		loadModules: function (cb) {
-
-			sails.log.verbose('Loading app config...');
-
-			// Grab reference to mapped overrides
-			var overrides = util.cloneDeep(sails.config);
+    // Default configuration
+    defaults: {},
 
 
-			// If appPath not specified yet, use process.cwd()
-			// (the directory where this Sails process is being initiated from)
-			if ( ! overrides.appPath ) {
-				sails.config.appPath = process.cwd();
-			}
+    /**
+     * Fetch relevant modules, exposing them on `sails` subglobal if necessary,
+     */
+    loadModules: function (cb) {
 
-			// Load config dictionary from app modules
-			sails.modules.loadUserConfig(function loadedAppConfigModules (err, userConfig) {
-				if (err) return cb(err);
+      sails.log.silly('Loading app config...');
 
-				// Finally, extend user config with overrides
-				var config = {};
+      // Grab reference to mapped overrides
+      // - - - - - - - - - - - - - - - - - - - - - - - - - - -
+      // FUTURE: Optimization: do we need this _.clone()?
+      // - - - - - - - - - - - - - - - - - - - - - - - - - - -
+      var overrides = _.clone(sails.config);
 
-				config = util.merge(userConfig, overrides);
 
-				// Ensure final configuration object is valid
-				// (in case moduleloader fails miserably)
-				config = util.isObject(config) ? config : (sails.config || {});
+      // If appPath not specified yet, use process.cwd()
+      // (the directory where this Sails process is being initiated from)
+      if ( ! overrides.appPath ) {
+        sails.config.appPath = process.cwd();
+      }
 
-				// Save final config into sails.config
-				sails.config = config;
+      // Load config dictionary from app modules
+      sails.modules.loadUserConfig(function loadedAppConfigModules (err, userConfig) {
+        if (err) { return cb(err); }
 
-				// Other hooks may use process.env.NODE_ENV to determine the environment,
-				// so set that here.  The userconfig hook will set the environment based
-				// on the overrides (command line or environment var), local.js key
-				// (if available) or else a default of "development"
-				process.env.NODE_ENV = sails.config.environment;
+        // Finally, extend user config with overrides
+        var config = {};
 
-				cb();
-			});
-		}
-	};
+        // Merge the overrides into the loaded user config.
+        config = mergeDictionaries(userConfig, overrides);
+
+        // Ensure final configuration object is valid
+        // (in case moduleloader fails miserably)
+        config = _.isObject(config) ? config : (sails.config || {});
+
+        // Save final config into sails.config
+        sails.config = config;
+
+        cb();
+      });
+    }
+  };
 };

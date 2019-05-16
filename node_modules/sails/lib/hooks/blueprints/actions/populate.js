@@ -1,65 +1,71 @@
 /**
  * Module dependencies
  */
-var util = require('util'),
-  actionUtil = require('../actionUtil');
 
+var actionUtil = require('../actionUtil');
+var formatUsageError = require('../formatUsageError');
 
 /**
  * Populate (or "expand") an association
  *
- * get /model/:parentid/relation
- * get /model/:parentid/relation/:id
+ * http://sailsjs.com/docs/reference/blueprint-api/populate
  *
- * @param {Integer|String} parentid  - the unique id of the parent instance
- * @param {Integer|String} id  - the unique id of the particular child instance you'd like to look up within this relation
- * @param {Object} where       - the find criteria (passed directly to the ORM)
- * @param {Integer} limit      - the maximum number of records to send back (useful for pagination)
- * @param {Integer} skip       - the number of records to skip (useful for pagination)
- * @param {String} sort        - the order of returned records, e.g. `name ASC` or `age DESC`
- *
- * @option {String} model  - the identity of the model
- * @option {String} alias  - the name of the association attribute (aka "alias")
  */
 
-module.exports = function expand(req, res) {
+module.exports = function populate(req, res) {
 
-  var Model = actionUtil.parseModel(req);
-  var relation = req.options.alias;
-  if (!relation || !Model) return res.serverError();
+  var sails = req._sails;
 
-  // Allow customizable blacklist for params.
-  req.options.criteria = req.options.criteria || {};
-  req.options.criteria.blacklist = req.options.criteria.blacklist || ['limit', 'skip', 'sort', 'id', 'parentid'];
+  var parseBlueprintOptions = req.options.parseBlueprintOptions || req._sails.config.blueprints.parseBlueprintOptions;
 
-  var parentPk = req.param('parentid');
+  // Set the blueprint action for parseBlueprintOptions.
+  req.options.blueprintAction = 'populate';
 
-  // Determine whether to populate using a criteria, or the
-  // specified primary key of the child record, or with no
-  // filter at all.
-  var childPk = actionUtil.parsePk(req);
-  var where = childPk ? [childPk] : actionUtil.parseCriteria(req);
+  var queryOptions = parseBlueprintOptions(req);
+  var Model = req._sails.models[queryOptions.using];
+
+  var attrName = queryOptions.alias;
+  if (!attrName || !Model) { return res.serverError(); }
+
+  // The primary key of the parent record
+  var parentPk = queryOptions.criteria.where[Model.primaryKey];
 
   Model
-    .findOne(parentPk)
-    .populate(relation, {
-      where: where,
-      skip: actionUtil.parseSkip(req),
-      limit: actionUtil.parseLimit(req),
-      sort: actionUtil.parseSort(req)
-    })
+    .findOne(parentPk, queryOptions.populates).meta(queryOptions.meta)
     .exec(function found(err, matchingRecord) {
-      if (err) return res.serverError(err);
-      if (!matchingRecord) return res.notFound('No record found with the specified id.');
-      if (!matchingRecord[relation]) return res.notFound(util.format('Specified record (%s) is missing relation `%s`', parentPk, relation));
+      if (err) {
+        // If this is a usage error coming back from Waterline,
+        // (e.g. a bad criteria), then respond w/ a 400 status code.
+        // Otherwise, it's something unexpected, so use 500.
+        switch (err.name) {
+          case 'UsageError': return res.badRequest(formatUsageError(err, req));
+          default: return res.serverError(err);
+        }
+      }//-•
 
-      // Subcribe to instance, if relevant
-      // TODO: only subscribe to populated attribute- not the entire model
+      if (!matchingRecord) {
+        sails.log.verbose('In `populate` blueprint action: No parent record found with the specified id (`'+parentPk+'`).');
+        return res.notFound();
+      }//-•
+
+      if (!matchingRecord[attrName]) {
+        sails.log.verbose('In `populate` blueprint action: Specified parent record ('+parentPk+') does not have a `'+attrName+'`.');
+        return res.notFound();
+      }//-•
+
+      // Subcribe to relevant record(s), if appropriate.
       if (sails.hooks.pubsub && req.isSocket) {
         Model.subscribe(req, matchingRecord);
         actionUtil.subscribeDeep(req, matchingRecord);
+        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        // FUTURE:
+        // Only subscribe to the associated record(s) without watching the entire
+        // associated model.  (Currently, `.subscribeDeep()` also calls `.watch()`,
+        // if `autoWatch` is enabled.)
+        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       }
 
-      return res.ok(matchingRecord[relation]);
+      return res.ok(matchingRecord[attrName]);
+
     });
 };

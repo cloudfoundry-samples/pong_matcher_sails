@@ -1,6 +1,14 @@
 {
-  "es5": true,
   "expr": true,
   "-W092": false,
-  "quotmark": true
+  "quotmark": true,
+  "curly": false,
+  "bitwise": false,
+  "eqeqeq": true,
+  "funcscope": true,
+  "futurehostile": true,
+  "nonew": true,
+  "unused": true,
+  "shadow": true,
+  "loopfunc": true
 }

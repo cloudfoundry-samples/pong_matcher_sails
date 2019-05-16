@@ -1,24 +1,27 @@
-#!/usr/bin/env node
-
-
 /**
  * Module dependencies
  */
 
-var Sails = require('../lib/app');
 var path = require('path');
 var Womb = require('child_process');
 var CaptainsLog = require('captains-log');
+var chalk = require('chalk');
+var Sails = require('../lib/app');
 
 
-/*
+/**
+ * `sails debug`
+ *
+ * Attach the Node debugger and lift a Sails app.
+ * You can then use Node inspector to debug your app as it runs.
+ *
+ * @stability 2
+ * @see http://sailsjs.com/documentation/reference/command-line-interface/sails-debug
+ */
+module.exports = function(cmd) {
 
-# This is here for backwards compatibility.
-node --debug `which sails` $@
-*/
+  var extraArgs = cmd.parent.rawArgs.slice(3);
 
-
-module.exports = function() {
   var log = CaptainsLog();
 
   // Use the app's local Sails in `node_modules` if one exists
@@ -33,23 +36,12 @@ module.exports = function() {
   console.log();
   log.info('Running app in debug mode...');
 
-  // Check whether node-inspector is running
-  Womb.exec('ps', function(error, stdout, stderr) {
+  log.info(chalk.grey('( to exit, type ' + '<CTRL>+<C>' + ' )'));
+  console.log();
 
-    // If not, suggest that they run it
-    if (error || stderr || !stdout.toString().match(/node-inspector/)) {
-      log.info('You probably want to install / run node-inspector to help with debugging!');
-      log.info('https://github.com/node-inspector/node-inspector');
-      console.log();
-    }
-
-    log.info(('( to exit, type ' + '<CTRL>+<C>' + ' )').grey);
-    console.log();
-
-    // Spin up child process for Sails
-    Womb.spawn('node', ['--debug', pathToSails, 'lift'], {
-      stdio: 'inherit'
-    });
+  // Spin up child process for Sails
+  Womb.spawn('node', ['--debug', pathToSails, 'lift'].concat(extraArgs), {
+    stdio: 'inherit'
   });
 
 };

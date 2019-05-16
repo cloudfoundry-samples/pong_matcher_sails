@@ -3,10 +3,13 @@
  */
 
 var nodepath = require('path');
+var CaptainsLog = require('captains-log');
 
+// Once per process:
 // Build logger using best-available information
 // when this module is initially required.
-var log = require('captains-log')(require('../lib/app/configuration/rc'));
+var rconf = require('../lib/app/configuration/rc')();
+var log = CaptainsLog(rconf.log);
 
 
 /**
@@ -43,13 +46,13 @@ module.exports = {
     log.warn();
   },
 
-  badLocalDependency: function(pathTo_localSails, requiredVersion) {
+  badLocalDependency: function(pathToLocalSails, requiredVersion) {
     log.warn(
-      'The local Sails dependency installed at `' + pathTo.localSails + '` ' +
+      'The local Sails dependency installed at `' + pathToLocalSails + '` ' +
       'has a corrupted, missing, or un-parsable package.json file.'
     );
     log.warn('You may consider running:');
-    log.warn('rm -rf ' + pathTo_localSails + ' && npm install sails@' + app.dependencies.sails);
+    log.warn('rm -rf ' + pathToLocalSails + ' && npm install sails@' + requiredVersion);
     log.warn();
   }
 };
