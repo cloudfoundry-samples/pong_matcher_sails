@@ -30,7 +30,7 @@
     "rc": "^1.2.8",
     "sails": "*",
     "sails-disk": "^1.1.2",
-    "sails-mysql": "^1.0.1"
+    "sails-mysql": "^3.0.0"
   },
   "scripts": {
     "start": "db-migrate up && node app.js",
